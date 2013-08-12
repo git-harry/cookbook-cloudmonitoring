@@ -9,7 +9,7 @@ Specifically this recipe will focus on main atom's in the system.
 * Agents
 * Agent Tokens
 
-The cookbook also installs the python-pip package in Debian and RedHat based systems, and then uses pip to install the Rackspace Cloud Monitoring client, raxmon-cli, via pip
+The cookbook can also install the python-pip package in Debian and RedHat based systems, and then uses pip to install the Rackspace Cloud Monitoring client, raxmon-cli, via pip
 
 The raxmon-cli recipe in this cookbook is not automatically added by default.  To install raxmon-cli, add the cloud_monitoring::raxmon recipe to the run_list. 
 
@@ -50,8 +50,7 @@ knife data bag create --secret-file <LOCATION/NAME OF SECRET FILE>  rackspace cl
 {
   "id": "cloud",
   "username": "<YOUR CLOUD SERVER USERNAME>",
-  "apikey": "<YOUR CLOUD SERVER API KEY>",
-  "region": "<YOUR ACCOUNT REGION (us OR uk)>"
+  "apikey": "<YOUR CLOUD SERVER API KEY>"
 }
 ```
 
@@ -69,8 +68,7 @@ knife data bag create --secret-file <LOCATION/NAME OF SECRET FILE>  rackspace cl
 {
   "id": "cloud",
   "username": "<YOUR CLOUD SERVER USERNAME>",
-  "apikey": "<YOUR CLOUD SERVER API KEY>",
-  "region": "<YOUR ACCOUNT REGION (us OR uk)>"
+  "apikey": "<YOUR CLOUD SERVER API KEY>"
 }
 ```
 
@@ -82,8 +80,6 @@ The following attributes are required, either in attributes/default.rb or an enc
 
 * `node['cloud_monitoring']['rackspace_username']`
 * `node['cloud_monitoring']['rackspace_api_key']`
-* `node['cloud_monitoring']['rackspace_auth_region']`
-  * This must be set to either 'us' or 'uk', depending on where your account was created
 
 # Usage
 
@@ -120,14 +116,14 @@ cloud_monitoring_entity "#{node.hostname}" do
 end
 ```
 
-This operation is idempotent, and will select the node based on the name of the resource, which maps to the label of the
-entity.  This is ***important*** because this pattern is repeated through out this cookbook.  If an attribute of the
+If the attribute node['cloud_monitoring']['entity']['id'] has not been set the provider will attempt to discover the entity based on the label as long as node['cloud_monitoring']['guess_resource'] is true.
+
+This operation attempts to be idempotent. This is ***important*** because this pattern is repeated through out this cookbook.  If an attribute of the
 resource changes the provider will issue a `PUT` instead of a `POST` to update the resource instead of creating another
 one.
 
-This will set an attribute on the node `node[:cloud_monitoring][:entity_id]`.  This attribute will be saved in the
-chef server.  It is bi-directional, it can re-attach your cloud monitoring entities to your chef node based on the
-label.  Keep in mind nothing is removed unless explicitly told so, like most chef resources.
+If a new entity is created this also sets the attribute on the node `node['cloud_monitoring']['entity']['id']`.  This attribute will be saved in the
+chef server.  Keep in mind nothing is removed unless explicitly told so, like most chef resources.
 
 
 ## Check
@@ -135,7 +131,7 @@ label.  Keep in mind nothing is removed unless explicitly told so, like most che
 The check is the way to start collecting data.  The stanza looks very similar to the `Entity` stanza except the accepted
 parameters are different, it is seen more as the "what" of monitoring.
 
-***Note: you must either have the attribute assigned `node[:cloud_monitoring][:entity_id]` or pass in an entity_id
+***Note: you must either have the attribute assigned `node['cloud_monitoring']['entity']['id']` or pass in an entity_id
 explicitly so the Check knows which node to create it on.***
 
 Here is an example of a ping check:
@@ -287,11 +283,10 @@ end
 ```
 
 # Agent and Agent Tokens
-The Agent recipe will install the cloud monitoring agent on your node and either register it with a provided agent_token
-or if none is provided it will call the cloud_monitoring_agent_token provider to generate a new one for this node.
+The Agent recipe will install the cloud monitoring agent on your node and either register it with a provided agent_token.
 
 The Agent token can either be provided through the following attribute.
-* `node['cloud_monitoring']['agent']['token']`  
+* `node['cloud_monitoring']['agent_token']['token']`  
 
 or through an entry in the rackspace cloud data bag like so.
 
@@ -333,7 +328,7 @@ Create a role in the following style:
 }
 ```
 
-This would mean you created a `my_plugin_cookbook` cookbook and placed all your plugins in `files/default/plugins`.
+This would mean you created a `my_plugin_cookbook` cookbook and placed all your plugins in `files/default/plugin_dir`. You will also need to add the plugins cookbook to the list of depends in the metadata.rb file for this cookbook, e.g. `depends my_plugin_cookbook`.
 
 [1]: http://docs.rackspace.com/cm/preview/api/v1.0/cm-devguide/content/appendix-check-types-agent.html
 [2]: https://github.com/opscode-cookbooks/ohai

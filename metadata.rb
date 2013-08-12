@@ -9,4 +9,3 @@ version          "0.3.0"
 depends "apt", ">= 1.4.2"
 depends "python"
 depends "yum"
-

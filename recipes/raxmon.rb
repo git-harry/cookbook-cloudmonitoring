@@ -27,7 +27,7 @@ template "/root/.raxrc" do
   variables(
     :raxusername => node['cloud_monitoring']['rackspace_username'],
     :raxapikey => node['cloud_monitoring']['rackspace_api_key'],
-    :raxauthurl => node['cloud_monitoring']['rackspace_auth_url'] 
+    :raxauthurl => node['cloud_monitoring']['rackspace_auth_url']
   )
 end
 

@@ -1,11 +1,18 @@
 include Rackspace::CloudMonitoring
 
 action :create do
-  check = @entity.checks.new(:label => new_resource.label, :type => new_resource.type, :details => new_resource.details,
-                             :metadata => new_resource.metadata, :monitoring_zones_poll => new_resource.monitoring_zones_poll,
-                             :target_alias => new_resource.target_alias, :target_hostname => new_resource.target_hostname,
-                             :target_resolver => new_resource.target_resolver, :timeout => new_resource.timeout,
-                             :period => new_resource.period)
+  check = @entity.checks.new(
+    :label => new_resource.label,
+    :type => new_resource.type,
+    :details => new_resource.details,
+    :metadata => new_resource.metadata,
+    :monitoring_zones_poll => new_resource.monitoring_zones_poll,
+    :target_alias => new_resource.target_alias,
+    :target_hostname => new_resource.target_hostname,
+    :target_resolver => new_resource.target_resolver,
+    :timeout => new_resource.timeout,
+    :period => new_resource.period
+  )
   if @current_resource.nil? then
     Chef::Log.info("Creating #{new_resource}")
     check.save
@@ -29,12 +36,7 @@ end
 
 
 def load_current_resource
-  if @new_resource.entity_label then
-    raise Exception, "Cannot specify entity_label and entity_id" unless @new_resource.entity_id.nil?
-    @entity = get_entity_by_label @new_resource.entity_label
-  else
-    @entity = get_entity_by_id @new_resource.entity_id || node['cloud_monitoring']['entity_id']
-  end
+  @entity = get_entity_by_id @new_resource.entity_id || node['cloud_monitoring']['entity']['id']
 
   @current_resource = get_check_by_id @entity.id, node['cloud_monitoring']['checks'][@new_resource.label]
   if @current_resource == nil then

@@ -8,28 +8,26 @@ module Rackspace
   module CloudMonitoring
 
     def cm
+      apikey = new_resource.rackspace_api_key
+      username = new_resource.rackspace_username
+      auth_url = new_resource.rackspace_auth_url
       begin
-        # Access the Rackspace Cloud encrypted data_bag
-        databag_dir = node["cloud_monitoring"]["credentials"]["databag_name"]
-        databag_filename = node["cloud_monitoring"]["credentials"]["databag_item"]
-
-        creds = Chef::EncryptedDataBagItem.load(databag_dir, databag_filename)
+        @@cm ||= Fog::Monitoring::Rackspace.new(
+          :rackspace_api_key => apikey,
+          :rackspace_username => username,
+          :rackspace_auth_url => auth_url,
+          :raise_errors => node['cloud_monitoring']['abort_on_failure']
+        )
       rescue Exception => e
-        creds = {'username' => nil, 'apikey' => nil, 'auth_url' => nil }
+        Chef::Log.error("Unable to authenticate")
+        raise
       end
-
-      apikey = new_resource.rackspace_api_key || creds['apikey']
-      username = new_resource.rackspace_username || creds['username']
-      auth_url = new_resource.rackspace_auth_url || creds['auth_url']
-      @@cm ||= Fog::Monitoring::Rackspace.new(:rackspace_api_key => apikey, :rackspace_username => username,
-                                              :rackspace_auth_url => auth_url,
-                                              :raise_errors => node['cloud_monitoring']['abort_on_failure'])
-      @@view ||= Hash[@@cm.entities.overview.map {|x| [x.identity, x]}]
+      @@view ||= Hash[@@cm.entities.overview.map { |x| [x.identity, x] }]
       @@cm
     end
 
     def tokens
-      @@tokens ||= Hash[cm.agent_tokens.all.map {|x| [x.identity, x]}]
+      @@tokens ||= Hash[cm.agent_tokens.all.map { |x| [x.identity, x] }]
     end
 
     def clear
@@ -68,7 +66,7 @@ module Rackspace
 
     def get_child_by_label(entity_id, label, type)
       objs = get_type entity_id, type
-      obj = objs.select {|x| x.label === label}
+      obj = objs.select { |x| x.label === label }
       if !obj.empty? then
         obj.first
       else
@@ -83,7 +81,7 @@ module Rackspace
     end
 
     def get_entity_by_label(label)
-      possible = view.select {|key, value| value.label === label}
+      possible = view.select { |key, value| value.label === label }
       possible = Hash[*possible.flatten(1)]
 
       if !possible.empty? then
@@ -94,13 +92,34 @@ module Rackspace
     end
 
     def get_entity_by_ip(ip_address)
-      possible = view.select {|key, value| value.ip_addresses.has_value?(ip_address) }
+      possible = view.select do |key, value|
+        value.ip_addresses.has_value?(ip_address)
+      end
       possible = Hash[*possible.flatten(1)]
 
       if !possible.empty? then
         possible.values.first
       else
         nil
+      end
+    end
+
+    def get_entity_by_label_and_ip(label, ip_address)
+      label_matches = view.select {|key, value| value.label === label}
+      possible = label_matches.select do |key, value|
+        begin
+          value.ip_addresses.has_value?(ip_address)
+        rescue NoMethodError
+        end
+      end
+      possible = Hash[*possible.flatten(1)]
+      matches = possible.length
+      if matches == 0
+        nil
+      elsif matches == 1
+        possible.values.first
+      else
+        raise Exception, "There are #{matches} entities with the label #{label} and IP address #{ip_address}."
       end
     end
 
@@ -125,13 +144,16 @@ module Rackspace
     end
 
     def get_token_by_label(label)
-      possible = tokens.select {|key, value| value.label === label}
+      possible = tokens.select { |key, value| value.label === label }
       possible = Hash[*possible.flatten(1)]
 
-      if !possible.empty? then
+      matches = possible.length
+      if matches == 0
+        nil
+      elsif matches == 1
         possible.values.first
       else
-        nil
+        raise Exception, "There are #{matches} agent tokens with the label #{label}."
       end
     end
   end

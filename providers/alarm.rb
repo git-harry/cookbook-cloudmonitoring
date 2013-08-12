@@ -16,9 +16,14 @@ action :create do
     check_id = get_check_by_label(@entity.id, new_resource.check_label).identity
   end
 
-  check = @entity.alarms.new(:label => new_resource.label, :check_type => new_resource.check_type, :check_id => check_id,
-                             :metadata => new_resource.metadata, :criteria => criteria,
-                             :notification_plan_id => new_resource.notification_plan_id)
+  check = @entity.alarms.new(
+    :label => new_resource.label,
+    :check_type => new_resource.check_type,
+    :check_id => check_id,
+    :metadata => new_resource.metadata,
+    :criteria => criteria,
+    :notification_plan_id => new_resource.notification_plan_id
+  )
   if @current_resource.nil? then
     Chef::Log.info("Creating #{new_resource}")
     check.save
@@ -42,12 +47,7 @@ end
 
 
 def load_current_resource
-  if @new_resource.entity_label then
-    raise Exception, "Cannot specify entity_label and entity_id" unless @new_resource.entity_id.nil?
-    @entity = get_entity_by_label @new_resource.entity_label
-  else
-    @entity = get_entity_by_id @new_resource.entity_id || node['cloud_monitoring']['entity_id']
-  end
+  @entity = get_entity_by_id @new_resource.entity_id || node['cloud_monitoring']['entity']['id']
 
   @current_resource = get_alarm_by_id @entity.id, node['cloud_monitoring']['alarms'][@new_resource.label]
   if @current_resource == nil then
